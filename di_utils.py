@@ -106,8 +106,8 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
         net.fc = nn.Linear(512, 2)
         train_data = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class1a)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class1b)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class2a)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class2b)+'.npy')])
         train_labels = np.hstack([np.zeros(len(train_data)//2, dtype=int), np.ones(len(train_data)//2, dtype=int)])
-        test_data_a = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1a)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2a)+'.npy')]).mean(axis=1, keepdims=True)
-        test_data_b = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1b)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2b)+'.npy')]).mean(axis=1, keepdims=True)
+        test_data_a = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1a)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2a)+'.npy')])
+        test_data_b = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1b)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2b)+'.npy')])
         test_labels = np.hstack([np.zeros(len(test_data_a)//2, dtype=int), np.ones(len(test_data_a)//2, dtype=int)])
         print('data and resnet18 loaded')
     
@@ -165,4 +165,4 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
 
 # aquatic - 1, flower - 3
 # medium mammals - 13, large carnivores - 9
-cifar100_joint_train('lenet', 1, 9, 3, 13)
+cifar100_joint_train('resnet18', 1, 9, 3, 13)
