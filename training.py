@@ -13,15 +13,15 @@ save_path = '/nfs/ghome/live/ajain/checkpoints/'
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
-#print(torch.cuda.get_device_name())
+print(torch.cuda.get_device_name())
 #model = models.LeNet5(10).to(device)
 model = torchvision.models.resnet18().to(device)
 model.fc = nn.Linear(512, 10).to(device)
 
 # Hyperparameters
-num_epochs = 5
-lr = 0.01
-num_batches = 1
+num_epochs = 100
+lr = 0.003
+num_batches = 5
 
 optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 loss_metric = nn.CrossEntropyLoss()

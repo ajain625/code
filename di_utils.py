@@ -166,3 +166,8 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
 # aquatic - 1, flower - 3
 # medium mammals - 13, large carnivores - 9
 cifar100_joint_train('resnet18', 1, 9, 3, 13)
+cifar100_joint_train('lenet', 1, 9, 3, 13)
+cifar100_individual_train('resnet18', 1, 3)
+cifar100_individual_train('lenet', 1, 3)
+cifar100_individual_train('resnet18', 9, 13)
+cifar100_individual_train('lenet', 9, 13)
