@@ -36,6 +36,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
     net = net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     loss_fn = nn.CrossEntropyLoss()
+    print(f'class1: {class1}, class2: {class2}')
 
     shuffle = np.random.permutation(len(train_data))
     train_data = train_data[shuffle]
@@ -115,6 +116,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
     net = net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     loss_fn = nn.CrossEntropyLoss()
+    print(f'Class 1a : {class1a} Class 1b {class1b} Class 2a {class2a} Class 2b {class2b}')
 
     shuffle = np.random.permutation(len(train_data))
     train_data = train_data[shuffle]
@@ -160,14 +162,14 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
             torch.cuda.empty_cache()
         net.train()
         # Save Model
-        torch.save({'epoch': epoch, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy_a': test_accuracy_a, 'test_accuracy_b':test_accuracy_b}, save_path + model+'_joint_'+str(class1a) + '&' + str(class1b)+'vs'+ str(class2a) + '&' + str(class2b) +'.pth')
+        torch.save({'epoch': epoch, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy_a': test_accuracy_a, 'test_accuracy_b':test_accuracy_b}, save_path + model+'_joint_'+str(class1a) + '_' + str(class1b)+'vs'+ str(class2a) + '_' + str(class2b) +'.pth')
     return test_accuracy_a, test_accuracy_b
 
 # aquatic - 1, flower - 3
 # medium mammals - 13, large carnivores - 9
-cifar100_joint_train('resnet18', 1, 9, 3, 13)
-cifar100_joint_train('lenet', 1, 9, 3, 13)
-cifar100_individual_train('resnet18', 1, 3)
-cifar100_individual_train('lenet', 1, 3)
+#cifar100_joint_train('resnet18', 1, 9, 3, 13)
+#cifar100_joint_train('lenet', 1, 9, 3, 13)
+#cifar100_individual_train('resnet18', 1, 3)
+#cifar100_individual_train('lenet', 1, 3)
 cifar100_individual_train('resnet18', 9, 13)
-cifar100_individual_train('lenet', 9, 13)
+#cifar100_individual_train('lenet', 9, 13)
