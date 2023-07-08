@@ -21,7 +21,6 @@ class LeNet5(nn.Module):
         self.fc1 = nn.Linear(120, 84)
         self.relu1 = nn.ReLU()
         self.fc2 = nn.Linear(84, num_classes)
-        self.softmax = nn.Softmax(dim=1)
         
     def forward(self, x):
         out = self.layer1(x)
@@ -32,6 +31,4 @@ class LeNet5(nn.Module):
         out = self.fc1(out)
         out = self.relu1(out)
         out = self.fc2(out)
-        #out = self.softmax(out)
         return out
-    

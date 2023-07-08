@@ -17,7 +17,6 @@ def load_cifar_batch(batch_number, normalize=True, gray=True):
     labelarray = np.array(labels)
 
     if normalize:
-        #imagearray = (imagearray- imagearray.mean(axis=(2, 3)))/imagearray.std(axis=(2, 3))
         imagearray = imagearray/255.0
     if gray:
         imagearray = imagearray.mean(axis=1, keepdims=True)
@@ -26,7 +25,6 @@ def load_cifar_batch(batch_number, normalize=True, gray=True):
 
 def cifar_accuracy(gt, output_probs):
     predictions = np.argmax(output_probs, axis=1)
-    #print(predictions[:2])
     return np.sum(gt == predictions)/len(gt)
 
 def normalise_images(images, gray=False, mean=np.array([0.485, 0.456, 0.406]), std=np.array([0.229, 0.224, 0.225])):
@@ -50,9 +48,9 @@ def load_cifar100_2_classes(class1, class2, gray=False, shuffle=True, seed=42):
         train_labels = train_labels[train_shuffle]
     return train_data, train_labels, test_data, test_labels
 
-train_data, train_labels, test_data, test_labels = load_cifar100_2_classes(1, 2)
-plt.imshow(np.transpose(train_data[1], (1, 2, 0)))
-plt.savefig('test.png')
-#print(train_data.shape, train_labels.shape, test_data.shape, test_labels.shape)
-#print(train_data.mean(axis=(0,2,3)), train_data.std(axis=(0,2,3)))
-#print(test_data.mean(axis=(0,2,3)), test_data.std(axis=(0,2,3)))
+# train_data, train_labels, test_data, test_labels = load_cifar100_2_classes(1, 2)
+# plt.imshow(np.transpose(train_data[1], (1, 2, 0)))
+# plt.savefig('test.png')
+# print(train_data.shape, train_labels.shape, test_data.shape, test_labels.shape)
+# print(train_data.mean(axis=(0,2,3)), train_data.std(axis=(0,2,3)))
+# print(test_data.mean(axis=(0,2,3)), test_data.std(axis=(0,2,3)))
