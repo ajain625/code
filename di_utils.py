@@ -8,7 +8,7 @@ import models
 
 
 def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, seed=42):
-    assert model in ['lenet', 'resnet18']
+    assert model in ['lenet', 'resnet']
     assert class1 in range(1, 21)
     assert class2 in range(1, 21)
     assert class1 != class2	
@@ -16,6 +16,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
     print(device)
     print(torch.cuda.get_device_name())
     np.random.seed(seed)
+    torch.manual_seed(seed)
 
     if model == 'lenet':
         net = models.LeNet5(2)
@@ -24,14 +25,14 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
         test_data = utils.normalise_images(np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2)+'.npy')]), gray=True)
         test_labels = np.hstack([np.zeros(len(test_data)//2, dtype=int), np.ones(len(test_data)//2, dtype=int)])
         print('data and lenet loaded')
-    elif model == 'resnet18':
+    elif model == 'resnet':
         net = torchvision.models.resnet18()
         net.fc = nn.Linear(512, 2)
         train_data = utils.normalise_images(np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class1)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class2)+'.npy')]))
         train_labels = np.hstack([np.zeros(len(train_data)//2, dtype=int), np.ones(len(train_data)//2, dtype=int)])
         test_data = utils.normalise_images(np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2)+'.npy')]))
         test_labels = np.hstack([np.zeros(len(test_data)//2, dtype=int), np.ones(len(test_data)//2, dtype=int)])
-        print('data and resnet18 loaded')
+        print('data and resnet loaded')
     
 
     net = net.to(device)
@@ -85,7 +86,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
     return test_accuracy
 
 def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, seed=42):
-    assert model in ['lenet', 'resnet18']
+    assert model in ['lenet', 'resnet']
     assert class1a in range(1, 21)
     assert class1b in range(1, 21)
     assert class2a in range(1, 21)
@@ -95,6 +96,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
     print(device)
     print(torch.cuda.get_device_name())
     np.random.seed(seed)
+    torch.manual_seed(seed)
 
     if model == 'lenet':
         net = models.LeNet5(2)
@@ -104,7 +106,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
         test_data_b = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1b)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2b)+'.npy')]).mean(axis=1, keepdims=True)
         test_labels = np.hstack([np.zeros(len(test_data_a)//2, dtype=int), np.ones(len(test_data_a)//2, dtype=int)])
         print('data and lenet loaded')
-    elif model == 'resnet18':
+    elif model == 'resnet':
         net = torchvision.models.resnet18()
         net.fc = nn.Linear(512, 2)
         train_data = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class1a)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class1b)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class2a)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class2b)+'.npy')])
@@ -112,7 +114,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
         test_data_a = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1a)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2a)+'.npy')])
         test_data_b = np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class1b)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class2b)+'.npy')])
         test_labels = np.hstack([np.zeros(len(test_data_a)//2, dtype=int), np.ones(len(test_data_a)//2, dtype=int)])
-        print('data and resnet18 loaded')
+        print('data and resnet loaded')
     
 
     net = net.to(device)
@@ -169,9 +171,9 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
 
 # aquatic - 1, flower - 3
 # medium mammals - 13, large carnivores - 9
-cifar100_joint_train('resnet18', 1, 9, 3, 13)
+cifar100_joint_train('resnet', 1, 9, 3, 13)
 cifar100_joint_train('lenet', 1, 9, 3, 13)
-cifar100_individual_train('resnet18', 1, 3)
+cifar100_individual_train('resnet', 1, 3)
 cifar100_individual_train('lenet', 1, 3)
-cifar100_individual_train('resnet18', 9, 13)
+cifar100_individual_train('resnet', 9, 13)
 cifar100_individual_train('lenet', 9, 13)
