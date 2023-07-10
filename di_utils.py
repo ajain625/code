@@ -7,7 +7,7 @@ import utils
 import models
 
 
-def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001):
+def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, seed=42):
     assert model in ['lenet', 'resnet18']
     assert class1 in range(1, 21)
     assert class2 in range(1, 21)
@@ -15,6 +15,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
     print(torch.cuda.get_device_name())
+    np.random.seed(seed)
 
     if model == 'lenet':
         net = models.LeNet5(2)
@@ -83,7 +84,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
         torch.save({'epoch': epoch, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy}, save_path + model+'_individual_'+str(class1)+'vs'+str(class2)+'.pth')
     return test_accuracy
 
-def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001):
+def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, seed=42):
     assert model in ['lenet', 'resnet18']
     assert class1a in range(1, 21)
     assert class1b in range(1, 21)
@@ -93,6 +94,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
     print(torch.cuda.get_device_name())
+    np.random.seed(seed)
 
     if model == 'lenet':
         net = models.LeNet5(2)
@@ -167,9 +169,9 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
 
 # aquatic - 1, flower - 3
 # medium mammals - 13, large carnivores - 9
-#cifar100_joint_train('resnet18', 1, 9, 3, 13)
-#cifar100_joint_train('lenet', 1, 9, 3, 13)
-#cifar100_individual_train('resnet18', 1, 3)
-#cifar100_individual_train('lenet', 1, 3)
+cifar100_joint_train('resnet18', 1, 9, 3, 13)
+cifar100_joint_train('lenet', 1, 9, 3, 13)
+cifar100_individual_train('resnet18', 1, 3)
+cifar100_individual_train('lenet', 1, 3)
 cifar100_individual_train('resnet18', 9, 13)
-#cifar100_individual_train('lenet', 9, 13)
+cifar100_individual_train('lenet', 9, 13)
