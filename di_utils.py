@@ -26,7 +26,8 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
         test_labels = np.hstack([np.zeros(len(test_data)//2, dtype=int), np.ones(len(test_data)//2, dtype=int)])
         print('data and lenet loaded')
     elif model == 'resnet':
-        net = torchvision.models.resnet18()
+        #net = torchvision.models.resnet18()
+        net = models.resnet18vw(width=64)
         net.fc = nn.Linear(512, 2)
         train_data = utils.normalise_images(np.vstack([np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class1)+'.npy'), np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class2)+'.npy')]))
         train_labels = np.hstack([np.zeros(len(train_data)//2, dtype=int), np.ones(len(train_data)//2, dtype=int)])
@@ -172,8 +173,8 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
 # aquatic - 1, flower - 3
 # medium mammals - 13, large carnivores - 9
 cifar100_joint_train('resnet', 1, 9, 3, 13)
-cifar100_joint_train('lenet', 1, 9, 3, 13)
+#cifar100_joint_train('lenet', 1, 9, 3, 13)
 cifar100_individual_train('resnet', 1, 3)
-cifar100_individual_train('lenet', 1, 3)
+#cifar100_individual_train('lenet', 1, 3)
 cifar100_individual_train('resnet', 9, 13)
-cifar100_individual_train('lenet', 9, 13)
+#cifar100_individual_train('lenet', 9, 13)
