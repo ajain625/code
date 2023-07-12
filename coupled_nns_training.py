@@ -198,7 +198,7 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
         if best_accuracy < (test_accuracy_a+test_accuracy_b)/2:
             print(f'Best Accuracy on Task A: {test_accuracy_a}, Best Accuracy on Task B: {test_accuracy_b}')
             best_accuracy = (test_accuracy_a+test_accuracy_b)/2
-            best_epoch = epoch
+            best_epoch = epoch+1
             best_accuracy_a = test_accuracy_a
             best_accuracy_b = test_accuracy_b
             torch.save({'epoch': epoch, 'model_state_dict': net1.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy_a}, save_path +'lenet_coupled_'+str(class1a)+'vs'+str(class2a)+ '_coupling_' + str(coupling_weight)+'.pth')
@@ -213,15 +213,20 @@ def resnet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = 
     torch.cuda.empty_cache()
     torch.manual_seed(seed)
 
-    net1 = torchvision.models.resnet18()
+    net1 = models.resnet18vw(64)
     net1.fc = nn.Linear(512, 2)
-    net2 = torchvision.models.resnet18()
+    net2 = models.resnet18vw(64)
     net2.fc = nn.Linear(512, 2)
     net1.load_state_dict(torch.load(checkpoint)['model_state_dict'])
     net2.load_state_dict(torch.load(checkpoint)['model_state_dict'])
     print(f'Accuracy A : {torch.load(checkpoint)["test_accuracy_a"]}, Accuracy B : {torch.load(checkpoint)["test_accuracy_b"]}')
     net1.to(device)
     net2.to(device)
+
+    best_accuracy = 0
+    best_accuracy_a = 0
+    best_accuracy_b = 0
+    best_epoch = 0
 
     # Freeze all layers except last fc layer
     for param in net1.parameters():
@@ -290,18 +295,26 @@ def resnet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = 
         net1.train()
         net2.train()
         # Save Models
-        torch.save({'epoch': epoch, 'model_state_dict': net1.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy_a}, save_path +'resnet_coupled_'+str(class1a)+'vs'+str(class2a)+ '_coupling_' + str(coupling_weight)+'.pth')
-        torch.save({'epoch': epoch, 'model_state_dict': net2.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy_b}, save_path +'resnet_coupled_'+str(class1b)+'vs'+str(class2b)+ '_coupling_' + str(coupling_weight)+'.pth')
-    return test_accuracy_a, test_accuracy_b
+        if best_accuracy < (test_accuracy_a+test_accuracy_b)/2:
+            print(f'Best Accuracy on Task A: {test_accuracy_a}, Best Accuracy on Task B: {test_accuracy_b}')
+            best_accuracy = (test_accuracy_a+test_accuracy_b)/2
+            best_epoch = epoch+1
+            best_accuracy_a = test_accuracy_a
+            best_accuracy_b = test_accuracy_b
+            torch.save({'epoch': epoch, 'model_state_dict': net1.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy_a}, save_path +'resnet_coupled_'+str(class1a)+'vs'+str(class2a)+ '_coupling_' + str(coupling_weight)+'.pth')
+            torch.save({'epoch': epoch, 'model_state_dict': net2.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy_b}, save_path +'resnet_coupled_'+str(class1b)+'vs'+str(class2b)+ '_coupling_' + str(coupling_weight)+'.pth')
+
+    return best_accuracy_a, best_accuracy_b, best_epoch
+
 
 if __name__ == '__main__':
     #lenet_coupling_alt(class1a=1, class2a=3, class1b=9, class2b=13, checkpoint1='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/lenet_individual_1vs3.pth', checkpoint2='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/lenet_individual_9vs13.pth', epochs=100, batch_size=128, coupling_weight=1)
     #lenet_coupling(checkpoint = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/lenet_joint_1_9vs3_13.pth', class1a=1, class2a=3, class1b=9, class2b=13, epochs=100, batch_size=128, coupling_weight=1, lr=0.01)
     #resnet_coupling(checkpoint = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/resnet_joint_1_9vs3_13.pth', class1a=1, class2a=3, class1b=9, class2b=13, epochs=500, batch_size=128, coupling_weight=1, lr=0.01)
-    coupling_weights = np.array([0.001, 0.01, 0.1, 1, 10, 100, 1000])
+    coupling_weights = np.array([0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000])
     results = []
     for coupling_weight in coupling_weights:
-        best_accuracy_a, best_accuracy_b, best_epoch = lenet_coupling(checkpoint = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/lenet_joint_1_9vs3_13.pth', class1a=1, class2a=3, class1b=9, class2b=13, epochs=250, batch_size=128, coupling_weight=coupling_weight, lr=0.01)
+        best_accuracy_a, best_accuracy_b, best_epoch = resnet_coupling(checkpoint = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/resnet_joint_1_9vs3_13.pth', class1a=1, class2a=3, class1b=9, class2b=13, epochs=250, batch_size=128, coupling_weight=coupling_weight, lr=0.01)
         results.append([coupling_weight, best_accuracy_a, best_accuracy_b, best_epoch])
-    np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/lenet_all_fc_coupled_results.csv', results, delimiter=', ', fmt='% s')
+    np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/resnet_fc_coupled_results.csv', results, delimiter=', ', fmt='% s')
  
