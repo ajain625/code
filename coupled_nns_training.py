@@ -109,7 +109,7 @@ def lenet_coupling_alt(checkpoint1, checkpoint2, class1a, class1b, class2a, clas
         torch.save({'epoch': epoch, 'model_state_dict': net2.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy_b}, save_path +'lenet_coupled_alt_'+str(class1b)+'vs'+str(class2b)+ '_coupling_' + str(coupling_weight)+'.pth')
     return test_accuracy_a, test_accuracy_b
 
-def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/', epochs=200, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, coupling_weight = 1, random_split= False, seed=42, split_order = None):
+def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/', epochs=200, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, coupling_weight = 1, random_split= False, seed=42, split_order = None, fine=True):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
     print(torch.cuda.get_device_name())
@@ -141,8 +141,8 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
     print('models loaded')
     
     optimizer = torch.optim.SGD([{'params': net1.parameters()},{'params': net2.parameters()}], lr=lr, momentum=momentum, weight_decay=weight_decay)
-    train_data_a, train_labels_a, test_data_a, test_labels_a = utils.load_cifar100_2_classes(class1a, class2a, shuffle=True, gray=True, seed=seed, random_split=random_split, split_order=split_order)
-    train_data_b, train_labels_b, test_data_b, test_labels_b = utils.load_cifar100_2_classes(class1b, class2b, shuffle=True, gray=True, seed=seed, random_split=random_split, split_order=split_order)
+    train_data_a, train_labels_a, test_data_a, test_labels_a = utils.load_cifar100_2_classes(class1a, class2a, shuffle=True, gray=True, seed=seed, random_split=random_split, split_order=split_order, fine=fine)
+    train_data_b, train_labels_b, test_data_b, test_labels_b = utils.load_cifar100_2_classes(class1b, class2b, shuffle=True, gray=True, seed=seed, random_split=random_split, split_order=split_order, fine=fine)
     assert train_data_a.shape[0] == train_data_b.shape[0]
     cross_entropy_loss = nn.CrossEntropyLoss()
     coupling_loss = nn.MSELoss()

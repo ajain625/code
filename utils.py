@@ -38,18 +38,18 @@ def normalise_images(images, gray=False, mean=np.array([0.485, 0.456, 0.406]), s
 
 def load_cifar100_class(class_num, gray=False, reduction = 1, random_split= True, seed=42, split_order=None, fine=False):
     if fine:
-        train_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar10/fine_class_wise/train'+str(class_num)+'.npy'), gray=gray)
-        test_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar10/fine_class_wise/test'+str(class_num)+'.npy'), gray=gray)
+        train_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar100/fine_class_wise/train'+str(class_num)+'.npy'), gray=gray)
+        test_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar100/fine_class_wise/test'+str(class_num)+'.npy'), gray=gray)
     else:
-        train_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar10/class_wise/train'+str(class_num)+'.npy'), gray=gray)
-        test_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar10/class_wise/test'+str(class_num)+'.npy'), gray=gray)
+        train_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/train'+str(class_num)+'.npy'), gray=gray)
+        test_data = normalise_images(np.load('/nfs/ghome/live/ajain/datasets/cifar100/class_wise/test'+str(class_num)+'.npy'), gray=gray)
     if not random_split:
         return train_data, test_data
     else:
         train_len = len(train_data)
         test_len = len(test_data)
         data = np.vstack([train_data, test_data])
-        if not split_order:
+        if split_order is None:
             np.random.seed(seed)
             split_order = np.random.permutation(len(data))
         data = data[split_order]

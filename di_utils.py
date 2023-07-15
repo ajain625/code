@@ -9,11 +9,12 @@ import models
 
 def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False):
     assert model in ['lenet', 'resnet']
-    assert class1 in range(1, 21)
-    assert class2 in range(1, 21)
+    #assert class1 in range(1, 21)
+    #assert class2 in range(1, 21)
     assert class1 != class2	
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    assert device == 'cuda'
+    print(device)
+    #assert device == 'cuda'
     print(torch.cuda.get_device_name())
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -76,13 +77,13 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
 
 def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False):
     assert model in ['lenet', 'resnet']
-    assert class1a in range(1, 21)
-    assert class1b in range(1, 21)
-    assert class2a in range(1, 21)
-    assert class2b in range(1, 21)
+    #assert class1a in range(1, 21)
+    #assert class1b in range(1, 21)
+    #assert class2a in range(1, 21)
+    #assert class2b in range(1, 21)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    assert device == 'cuda'
+    #assert device == 'cuda'
     print(torch.cuda.get_device_name())
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -164,13 +165,14 @@ def disparate_impact(model, class1a, class1b, class2a, class2b, cross=False, see
     else:
         print('Disparate Impact: {}, Individual Accuracy A: {}, Individual Accuracy B: {}, Joint Accuracy A: {}, Joint Accuracy B: {}'.format(disparate_impact, individual_accuracy_a, individual_accuracy_b, joint_accuracy_a, joint_accuracy_b))
         return disparate_impact, individual_accuracy_a, individual_accuracy_b, joint_accuracy_a, joint_accuracy_b
-
-# aquatic - 1, flower - 3
-# medium mammals - 13, large carnivores - 9
-#cifar100_joint_train('resnet', 1, 9, 3, 13)
-#cifar100_joint_train('lenet', 1, 9, 3, 13)
-#cifar100_individual_train('resnet', 1, 3)
-#cifar100_individual_train('lenet', 1, 3)
-#cifar100_individual_train('resnet', 9, 13)
-#cifar100_individual_train('lenet', 9, 13)
-disparate_impact('lenet', 1, 9, 3, 13, seed=42)
+    
+if __name__ == '__main__':
+    # aquatic - 1, flower - 3
+    # medium mammals - 13, large carnivores - 9
+    #cifar100_joint_train('resnet', 1, 9, 3, 13)
+    #cifar100_joint_train('lenet', 1, 9, 3, 13)
+    #cifar100_individual_train('resnet', 1, 3)
+    #cifar100_individual_train('lenet', 1, 3)
+    #cifar100_individual_train('resnet', 9, 13)
+    #cifar100_individual_train('lenet', 9, 13)
+    disparate_impact('lenet', 1, 9, 3, 13, seed=42)
