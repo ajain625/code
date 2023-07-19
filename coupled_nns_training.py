@@ -147,7 +147,7 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
     train_data_b, train_labels_b, test_data_b, test_labels_b = utils.load_cifar100_2_classes(class1b, class2b, shuffle=True, gray=True, seed=seed, random_split=random_split, split_order=split_order, fine=fine)
     assert train_data_a.shape[0] == train_data_b.shape[0]
     cross_entropy_loss = nn.CrossEntropyLoss()
-    coupling_loss = nn.MSELoss()
+    coupling_loss = nn.MSELoss(reduction='sum')
     batches = int(train_data_a.shape[0]/batch_size)
     print('training starting')
     print(f'Coupling Weight : {coupling_weight}')
@@ -167,11 +167,27 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
             images_b = torch.from_numpy(train_data_b[batch*batch_size:(batch+1)*batch_size]).to(device)
             labels_b = torch.from_numpy(train_labels_b[batch*batch_size:(batch+1)*batch_size]).to(device)
             outputs_b = net2(images_b)
-            loss = cross_entropy_loss(outputs_a, labels_a) + cross_entropy_loss(outputs_b, labels_b) + coupling_weight*coupling_loss(net1.fc2.weight, net2.fc2.weight) + coupling_weight*coupling_loss(net1.fc2.bias, net2.fc2.bias) + coupling_weight*coupling_loss(net1.fc1.weight, net2.fc1.weight) + coupling_weight*coupling_loss(net1.fc1.bias, net2.fc1.bias) + coupling_weight*coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_weight*coupling_loss(net1.fc.bias, net2.fc.bias)
+            loss_from1 = cross_entropy_loss(outputs_a, labels_a)
+            loss_from2 = cross_entropy_loss(outputs_b, labels_b)
+            loss_from_coupling = coupling_loss(net1.fc2.weight, net2.fc2.weight) + coupling_loss(net1.fc2.bias, net2.fc2.bias) + coupling_loss(net1.fc1.weight, net2.fc1.weight) + coupling_loss(net1.fc1.bias, net2.fc1.bias) + coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.fc.bias, net2.fc.bias)
+            #loss_from_coupling = coupling_loss(net1.fc2.bias, net2.fc2.bias) 
+            #print(f'Epoch: [{epoch+1}/{epochs}], Batch: [{batch+1}/{batches}], Loss1: {loss_from1.item()}, Loss2: {loss_from2.item()}, Coupling Loss: {loss_from_coupling.item(),}, Accuracy A: {utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())}, Accuracy B: {utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())}')
+            loss = loss_from1 + loss_from2 + coupling_weight*loss_from_coupling
             optimizer.zero_grad()
             loss.backward()
+            # total_norm_1 = 0
+            # total_norm_2 = 0
+            # for p in list(filter(lambda p: p.grad is not None, net1.parameters())):
+            #     print(f"epoch: {epoch}, batch: {batch}, gradient 1")
+            #     total_norm_1 += p.grad.data.norm(2).item()
+            # print(total_norm_1**(1.0/2))
+            # for p in list(filter(lambda p: p.grad is not None, net2.parameters())):
+            #     print(f"epoch: {epoch}, batch: {batch}, gradient 2")
+            #     total_norm_2 += p.grad.data.norm(2).item()
+            # print(total_norm_2**(1.0/2))
+            #torch.nn.utils.clip_grad_norm_(net1.parameters(), 100)
+            #torch.nn.utils.clip_grad_norm_(net2.parameters(), 100)
             optimizer.step()
-            #print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batch+1, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
             del images_a, labels_a, outputs_a, images_b, labels_b, outputs_b
             torch.cuda.empty_cache()
         images_a = torch.from_numpy(train_data_a[(batch+1)*batch_size:]).to(device)
@@ -180,11 +196,22 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
         images_b = torch.from_numpy(train_data_b[(batch+1)*batch_size:]).to(device)
         labels_b = torch.from_numpy(train_labels_b[(batch+1)*batch_size:]).to(device)
         outputs_b = net2(images_b)
-        loss = cross_entropy_loss(outputs_a, labels_a) + cross_entropy_loss(outputs_b, labels_b) + coupling_weight*coupling_loss(net1.fc2.weight, net2.fc2.weight) + coupling_weight*coupling_loss(net1.fc2.bias, net2.fc2.bias) + coupling_weight*coupling_loss(net1.fc1.weight, net2.fc1.weight) + coupling_weight*coupling_loss(net1.fc1.bias, net2.fc1.bias) + coupling_weight*coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_weight*coupling_loss(net1.fc.bias, net2.fc.bias)
+        loss_from1 = cross_entropy_loss(outputs_a, labels_a)
+        loss_from2 = cross_entropy_loss(outputs_b, labels_b)
+        loss_from_coupling = coupling_loss(net1.fc2.weight, net2.fc2.weight) + coupling_loss(net1.fc2.bias, net2.fc2.bias) + coupling_loss(net1.fc1.weight, net2.fc1.weight) + coupling_loss(net1.fc1.bias, net2.fc1.bias) + coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.fc.bias, net2.fc.bias)
+        #print(f'Epoch: [{epoch+1}/{epochs}], Batch: [{batch+2}/{batches}], Loss1: {loss_from1.item()}, Loss2: {loss_from2.item()}, Coupling Loss: {loss_from_coupling.item(),}, Accuracy A: {utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())}, Accuracy B: {utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())}')
+        loss = loss_from1 + loss_from2 + coupling_weight*loss_from_coupling
         optimizer.zero_grad()
         loss.backward()
+        # for p in list(filter(lambda p: p.grad is not None, net1.parameters())):
+        #     print(f"epoch: {epoch}, batch: {batch+2}, gradient 1")
+        #     print(p.grad.data.norm(2).item())
+        # for p in list(filter(lambda p: p.grad is not None, net2.parameters())):
+        #     print(f"epoch: {epoch}, batch: {batch+2}, gradient 1")
+        #     print(p.grad.data.norm(2).item())
+        #torch.nn.utils.clip_grad_norm_(net1.parameters(), 100)
+        #torch.nn.utils.clip_grad_norm_(net2.parameters(), 100)
         optimizer.step()
-        #print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batch+1, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
         del images_a, labels_a, outputs_a, images_b, labels_b, outputs_b
         torch.cuda.empty_cache()
 
@@ -200,7 +227,7 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
             outputs_b = net2(images_b)
             test_accuracy_a = utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())
             test_accuracy_b = utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())
-            if epoch%10 == 0:
+            if epoch%30 == 0:
                 print('(Test Set) Epoch: [{}/{}], Train Loss: {}, Accuracy Task A: {}, Accuracy Task B: {}'.format(epoch+1, epochs, loss.item(), test_accuracy_a, test_accuracy_b))
             del images_a, labels_a, outputs_a, images_b, labels_b, outputs_b
             torch.cuda.empty_cache()
@@ -255,11 +282,18 @@ def resnet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = 
     train_data_b, train_labels_b, test_data_b, test_labels_b = utils.load_cifar100_2_classes(class1b, class2b, gray=False, seed=seed, fine=fine, random_split=random_split, split_order=split_order)
     assert train_data_a.shape[0] == train_data_b.shape[0]
     cross_entropy_loss = nn.CrossEntropyLoss()
-    coupling_loss = nn.MSELoss()
+    coupling_loss = nn.MSELoss(reduction='sum')
     batches = int(train_data_a.shape[0]/batch_size)
     print('training starting')
+    seeds = np.arange(epochs)
 
     for epoch in range(epochs):
+        np.random.seed(seeds[epoch])
+        shuffle = np.random.permutation(train_data_a.shape[0])
+        train_data_a = train_data_a[shuffle]
+        train_labels_a = train_labels_a[shuffle]
+        train_data_b = train_data_b[shuffle]
+        train_labels_b = train_labels_b[shuffle]
         for batch in range(batches-1):
             images_a = torch.from_numpy(train_data_a[batch*batch_size:(batch+1)*batch_size]).to(device)
             labels_a = torch.from_numpy(train_labels_a[batch*batch_size:(batch+1)*batch_size]).to(device)
@@ -267,7 +301,11 @@ def resnet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = 
             images_b = torch.from_numpy(train_data_b[batch*batch_size:(batch+1)*batch_size]).to(device)
             labels_b = torch.from_numpy(train_labels_b[batch*batch_size:(batch+1)*batch_size]).to(device)
             outputs_b = net2(images_b)
-            loss = cross_entropy_loss(outputs_a, labels_a) + cross_entropy_loss(outputs_b, labels_b) + coupling_weight*(coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.layer4[0].conv1.weight, net2.layer4[0].conv1.weight) + coupling_loss(net1.layer4[0].conv2.weight, net2.layer4[0].conv2.weight) + coupling_loss(net1.layer4[1].conv1.weight, net2.layer4[1].conv1.weight) + coupling_loss(net1.layer4[1].conv2.weight, net2.layer4[1].conv2.weight) + coupling_loss(net1.layer4[0].downsample[0].weight, net2.layer4[0].downsample[0].weight))
+            loss_from1 = cross_entropy_loss(outputs_a, labels_a)
+            loss_from2 = cross_entropy_loss(outputs_b, labels_b)
+            loss_from_coupling = coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.layer4[0].conv1.weight, net2.layer4[0].conv1.weight) + coupling_loss(net1.layer4[0].conv2.weight, net2.layer4[0].conv2.weight) + coupling_loss(net1.layer4[1].conv1.weight, net2.layer4[1].conv1.weight) + coupling_loss(net1.layer4[1].conv2.weight, net2.layer4[1].conv2.weight) + coupling_loss(net1.layer4[0].downsample[0].weight, net2.layer4[0].downsample[0].weight)
+            #print(f'Epoch: [{epoch+1}/{epochs}], Batch: [{batch+1}/{batches}], Loss1: {loss_from1.item()}, Loss2: {loss_from2.item()}, Coupling Loss: {loss_from_coupling.item(),}, Accuracy A: {utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())}, Accuracy B: {utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())}')
+            loss = loss_from1 + loss_from2 + coupling_weight*loss_from_coupling
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -280,7 +318,11 @@ def resnet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = 
         images_b = torch.from_numpy(train_data_b[(batch+1)*batch_size:]).to(device)
         labels_b = torch.from_numpy(train_labels_b[(batch+1)*batch_size:]).to(device)
         outputs_b = net2(images_b)
-        loss = cross_entropy_loss(outputs_a, labels_a) + cross_entropy_loss(outputs_b, labels_b) + coupling_weight*(coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.layer4[0].conv1.weight, net2.layer4[0].conv1.weight) + coupling_loss(net1.layer4[0].conv2.weight, net2.layer4[0].conv2.weight) + coupling_loss(net1.layer4[1].conv1.weight, net2.layer4[1].conv1.weight) + coupling_loss(net1.layer4[1].conv2.weight, net2.layer4[1].conv2.weight) + coupling_loss(net1.layer4[0].downsample[0].weight, net2.layer4[0].downsample[0].weight))
+        loss_from1 = cross_entropy_loss(outputs_a, labels_a)
+        loss_from2 = cross_entropy_loss(outputs_b, labels_b)
+        loss_from_coupling = coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.layer4[0].conv1.weight, net2.layer4[0].conv1.weight) + coupling_loss(net1.layer4[0].conv2.weight, net2.layer4[0].conv2.weight) + coupling_loss(net1.layer4[1].conv1.weight, net2.layer4[1].conv1.weight) + coupling_loss(net1.layer4[1].conv2.weight, net2.layer4[1].conv2.weight) + coupling_loss(net1.layer4[0].downsample[0].weight, net2.layer4[0].downsample[0].weight)
+        #print(f'Epoch: [{epoch+1}/{epochs}], Batch: [{batch+2}/{batches}], Loss1: {loss_from1.item()}, Loss2: {loss_from2.item()}, Coupling Loss: {loss_from_coupling.item(),}, Accuracy A: {utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())}, Accuracy B: {utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())}')
+        loss = loss_from1 + loss_from2 + coupling_weight*loss_from_coupling
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -322,17 +364,17 @@ def resnet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = 
 if __name__ == '__main__':
     # Task a: rose (71) vs lion (44)
     # Task b: tulip (93) vs lepoard (43)
-    coupling_weights = np.array([0, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000])
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    coupling_weights = np.array([0, 0.001, 0.01, 0.1, 1, 10, 100, 1000])
     seeds = np.arange(5)
     results = []
-    print('LeNet Coupling')
+    print('ResNet Coupling')
     for seed in seeds:
         print(f'Seed: {seed}')
         np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = True
         split_order = np.random.permutation(600)
         print('Individual Training A')
         individual_accuracy_a = di_utils.cifar100_individual_train('lenet', class1=71, class2=44, epochs=1000, batch_size=128, lr=0.01, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
@@ -344,6 +386,6 @@ if __name__ == '__main__':
         np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/lenet_coupling.csv', results, delimiter=', ', fmt='% s')
         print('Coupling')
         for coupling_weight in coupling_weights:
-            coupling_a, coupling_b, epoch = lenet_coupling('/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/lenet_joint_71_93vs44_43.pth', class1a=71, class2a=44, class1b=93, class2b=43, coupling_weight=coupling_weight, epochs=3000, batch_size=128, lr=1e-4, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
+            coupling_a, coupling_b, epoch = lenet_coupling('/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/lenet_joint_71_93vs44_43.pth', class1a=71, class2a=44, class1b=93, class2b=43, coupling_weight=coupling_weight, epochs=3000, batch_size=128, lr=1e-4, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
             results.append([seed, coupling_weight, coupling_a, coupling_b, epoch])
             np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/lenet_coupling.csv', results, delimiter=', ', fmt='% s')

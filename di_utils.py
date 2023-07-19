@@ -6,7 +6,7 @@ import utils
 import models
 
 
-def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False, reduction=1):
+def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/coarse', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False, reduction=1):
     assert model in ['lenet', 'resnet']
     #assert class1 in range(1, 21)
     #assert class2 in range(1, 21)
@@ -79,7 +79,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
         torch.save({'epoch': epoch, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy': test_accuracy}, save_path + model+'_individual_'+str(class1)+'vs'+str(class2)+'.pth')
     return test_accuracy
 
-def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False, reduction=1):
+def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/coarse', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False, reduction=1):
     assert model in ['lenet', 'resnet']
     #assert class1a in range(1, 21)
     #assert class1b in range(1, 21)
@@ -154,7 +154,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
         torch.save({'epoch': epoch, 'model_state_dict': net.state_dict(), 'optimizer_state_dict': optimizer.state_dict(), 'loss': loss, 'test_accuracy_a': test_accuracy_a, 'test_accuracy_b':test_accuracy_b}, save_path + model+'_joint_'+str(class1a) + '_' + str(class1b)+'vs'+ str(class2a) + '_' + str(class2b) +'.pth')
     return test_accuracy_a, test_accuracy_b
 
-def disparate_impact(model, class1a, class1b, class2a, class2b, cross=False, seed=42, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, fine=False, random_split=True):
+def disparate_impact(model, class1a, class1b, class2a, class2b, cross=False, seed=42, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/coarse', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, fine=False, random_split=True):
     print('Disparate Impact Analysis')
     print('Model: ', model)
     print('Classes: ', class1a, class1b, class2a, class2b)
