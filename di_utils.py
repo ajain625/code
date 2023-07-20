@@ -59,7 +59,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batches, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
+        #print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batches, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
         del images, labels, outputs
         torch.cuda.empty_cache()
 
@@ -71,7 +71,8 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
             outputs = net(images)
             loss = loss_fn(outputs, labels)
             test_accuracy = utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())
-            print('(Test Set) Epoch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, loss.item(), test_accuracy))
+            if epoch%10 == 0:
+                print('(Test Set) Epoch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, loss.item(), test_accuracy))
             del images, labels, outputs
             torch.cuda.empty_cache()
         net.train()
@@ -146,7 +147,8 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
             outputs_b = net(images_b)
             test_accuracy_a = utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())
             test_accuracy_b = utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())
-            print('(Test Set) Epoch: [{}/{}], Accuracy Task A : {}, Accuracy Task B: {}'.format(epoch+1, epochs, test_accuracy_a, test_accuracy_b))
+            if epoch%10 == 0:
+                print('(Test Set) Epoch: [{}/{}], Accuracy Task A : {}, Accuracy Task B: {}'.format(epoch+1, epochs, test_accuracy_a, test_accuracy_b))
             del images_a, images_b, labels, outputs_a, outputs_b
             torch.cuda.empty_cache()
         net.train()
@@ -188,4 +190,42 @@ if __name__ == '__main__':
     #cifar100_individual_train('resnet', 9, 13)
     #cifar100_individual_train('lenet', 9, 13)
     #disparate_impact('resnet', class1a = 1, class1b = 9, class2a = 3, class2b = 13, cross=True, seed=42)
-    disparate_impact('resnet', class1a = 71, class1b = 93, class2a = 44, class2b = 43, cross=False, seed=42, fine=True, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/', random_split=False, lr=0.001)
+    seed = 42
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    tasks = np.array([[ 4,  1,  9,  8],
+       [ 8,  5,  4,  3],
+       [19, 14,  2,  1],
+       [ 3,  7,  8, 17],
+       [20,  1, 18,  7],
+       [18, 14,  8, 15],
+       [19,  9,  1,  6],
+       [14, 11,  9,  5],
+       [ 7, 11,  4,  3],
+       [13,  4, 12, 18],
+       [20,  9,  2, 15],
+       [18,  4, 13,  3],
+       [18, 10, 12,  7],
+       [ 3,  2,  8, 10],
+       [ 3,  8,  4, 13],
+       [ 9, 15, 12,  6],
+       [12, 20,  7,  9],
+       [ 3,  6, 18,  8],
+       [ 6, 15, 13,  9],
+       [18,  8, 11,  2],
+       [ 8,  2, 11, 13],
+       [ 9,  3,  7, 11],
+       [ 7, 16, 13, 15],
+       [ 5,  9, 20,  8],
+       [18, 20,  9, 14],
+       [19, 13, 12,  8],
+       [ 5, 17, 16,  3],
+       [ 2,  4,  5,  6],
+       [14,  3, 13, 18],
+       [20, 15, 17,  9]])
+    results = []
+    for i in range(len(tasks)):
+        print('Task: ', i)
+        di, individual_accuracy_a, individual_accuracy_b, joint_accuracy_a, joint_accuracy_b, cross_accuracy_a, cross_accuracy_b = disparate_impact('resnet', class1a = tasks[i][0], class1b = tasks[i][1], class2a = tasks[i][2], class2b = tasks[i][3], cross=True, seed=seed, fine=False, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/coarse/', random_split=True)
+        results.append([tasks[i][0], tasks[i][1], tasks[i][2], tasks[i][3], di, individual_accuracy_a, individual_accuracy_b, joint_accuracy_a, joint_accuracy_b, cross_accuracy_a, cross_accuracy_b])
+        np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/coarse/resnet_30tasks_results.csv', np.array(results), delimiter=',', fmt='%f')
