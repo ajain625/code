@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torchvision
 import numpy as np
 
 import utils
@@ -118,8 +117,8 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
 
     net1 = models.LeNet5(2)
     net2 = models.LeNet5(2)
-    checkpoint1 = torch.load(checkpoint)['model_state_dict']
-    checkpoint2 = torch.load(checkpoint)['model_state_dict']
+    #checkpoint1 = torch.load(checkpoint)['model_state_dict']
+    #checkpoint2 = torch.load(checkpoint)['model_state_dict']
     #checkpoint1 = {k:v for k,v in checkpoint1.items() if not k.startswith('fc')}
     #checkpoint2 = {k:v for k,v in checkpoint2.items() if not k.startswith('fc')}
     net1.load_state_dict(torch.load(checkpoint)['model_state_dict'], strict=True)
@@ -160,18 +159,24 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
         train_labels_a = train_labels_a[shuffle]
         train_data_b = train_data_b[shuffle]
         train_labels_b = train_labels_b[shuffle]
-        for batch in range(batches-1):
-            images_a = torch.from_numpy(train_data_a[batch*batch_size:(batch+1)*batch_size]).to(device)
-            labels_a = torch.from_numpy(train_labels_a[batch*batch_size:(batch+1)*batch_size]).to(device)
+        for batch in range(batches):
+            if batch != batches-1:
+                images_a = torch.from_numpy(train_data_a[batch*batch_size:(batch+1)*batch_size]).to(device)
+                labels_a = torch.from_numpy(train_labels_a[batch*batch_size:(batch+1)*batch_size]).to(device)
+                images_b = torch.from_numpy(train_data_b[batch*batch_size:(batch+1)*batch_size]).to(device)
+                labels_b = torch.from_numpy(train_labels_b[batch*batch_size:(batch+1)*batch_size]).to(device)
+            else:
+                images_a = torch.from_numpy(train_data_a[batch*batch_size:]).to(device)
+                labels_a = torch.from_numpy(train_labels_a[batch*batch_size:]).to(device)
+                images_b = torch.from_numpy(train_data_b[batch*batch_size:]).to(device)
+                labels_b = torch.from_numpy(train_labels_b[batch*batch_size:]).to(device)
             outputs_a = net1(images_a)
-            images_b = torch.from_numpy(train_data_b[batch*batch_size:(batch+1)*batch_size]).to(device)
-            labels_b = torch.from_numpy(train_labels_b[batch*batch_size:(batch+1)*batch_size]).to(device)
             outputs_b = net2(images_b)
             loss_from1 = cross_entropy_loss(outputs_a, labels_a)
             loss_from2 = cross_entropy_loss(outputs_b, labels_b)
-            loss_from_coupling = coupling_loss(net1.fc2.weight, net2.fc2.weight) + coupling_loss(net1.fc2.bias, net2.fc2.bias) + coupling_loss(net1.fc1.weight, net2.fc1.weight) + coupling_loss(net1.fc1.bias, net2.fc1.bias) + coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.fc.bias, net2.fc.bias)
-            #loss_from_coupling = coupling_loss(net1.fc2.bias, net2.fc2.bias) 
-            #print(f'Epoch: [{epoch+1}/{epochs}], Batch: [{batch+1}/{batches}], Loss1: {loss_from1.item()}, Loss2: {loss_from2.item()}, Coupling Loss: {loss_from_coupling.item(),}, Accuracy A: {utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())}, Accuracy B: {utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())}')
+            loss_from_coupling = (coupling_loss(net1.fc2.weight, net2.fc2.weight) + coupling_loss(net1.fc2.bias, net2.fc2.bias))/170 + (coupling_loss(net1.fc1.weight, net2.fc1.weight) + coupling_loss(net1.fc1.bias, net2.fc1.bias))/10164 + (coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.fc.bias, net2.fc.bias))/48120 + (coupling_loss(net1.layer2[0].weight, net2.layer2[0].weight) + coupling_loss(net1.layer2[0].bias, net2.layer2[0].bias))/2416 + (coupling_loss(net1.layer1[0].weight, net2.layer1[0].weight) + coupling_loss(net1.layer1[0].bias, net2.layer1[0].bias))/156
+            if epoch %30 == 0 and batch == 6:
+                print(f'Epoch: [{epoch+1}/{epochs}], Batch: [{batch+1}/{batches}], Loss1: {loss_from1.item()}, Loss2: {loss_from2.item()}, Coupling Loss: {loss_from_coupling.item(),}, Accuracy A: {utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())}, Accuracy B: {utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())}')
             loss = loss_from1 + loss_from2 + coupling_weight*loss_from_coupling
             optimizer.zero_grad()
             loss.backward()
@@ -190,30 +195,6 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
             optimizer.step()
             del images_a, labels_a, outputs_a, images_b, labels_b, outputs_b
             torch.cuda.empty_cache()
-        images_a = torch.from_numpy(train_data_a[(batch+1)*batch_size:]).to(device)
-        labels_a = torch.from_numpy(train_labels_a[(batch+1)*batch_size:]).to(device)
-        outputs_a = net1(images_a)
-        images_b = torch.from_numpy(train_data_b[(batch+1)*batch_size:]).to(device)
-        labels_b = torch.from_numpy(train_labels_b[(batch+1)*batch_size:]).to(device)
-        outputs_b = net2(images_b)
-        loss_from1 = cross_entropy_loss(outputs_a, labels_a)
-        loss_from2 = cross_entropy_loss(outputs_b, labels_b)
-        loss_from_coupling = coupling_loss(net1.fc2.weight, net2.fc2.weight) + coupling_loss(net1.fc2.bias, net2.fc2.bias) + coupling_loss(net1.fc1.weight, net2.fc1.weight) + coupling_loss(net1.fc1.bias, net2.fc1.bias) + coupling_loss(net1.fc.weight, net2.fc.weight) + coupling_loss(net1.fc.bias, net2.fc.bias)
-        #print(f'Epoch: [{epoch+1}/{epochs}], Batch: [{batch+2}/{batches}], Loss1: {loss_from1.item()}, Loss2: {loss_from2.item()}, Coupling Loss: {loss_from_coupling.item(),}, Accuracy A: {utils.cifar_accuracy(labels_a.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())}, Accuracy B: {utils.cifar_accuracy(labels_b.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())}')
-        loss = loss_from1 + loss_from2 + coupling_weight*loss_from_coupling
-        optimizer.zero_grad()
-        loss.backward()
-        # for p in list(filter(lambda p: p.grad is not None, net1.parameters())):
-        #     print(f"epoch: {epoch}, batch: {batch+2}, gradient 1")
-        #     print(p.grad.data.norm(2).item())
-        # for p in list(filter(lambda p: p.grad is not None, net2.parameters())):
-        #     print(f"epoch: {epoch}, batch: {batch+2}, gradient 1")
-        #     print(p.grad.data.norm(2).item())
-        #torch.nn.utils.clip_grad_norm_(net1.parameters(), 100)
-        #torch.nn.utils.clip_grad_norm_(net2.parameters(), 100)
-        optimizer.step()
-        del images_a, labels_a, outputs_a, images_b, labels_b, outputs_b
-        torch.cuda.empty_cache()
 
         # Test Set	
         with torch.no_grad():
@@ -366,26 +347,27 @@ if __name__ == '__main__':
     # Task b: tulip (93) vs lepoard (43)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    coupling_weights = np.array([0, 0.001, 0.01, 0.1, 1, 10, 100, 1000])
+    coupling_weights = np.array([0, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000])
     seeds = np.arange(5)
-    results = []
-    print('ResNet Coupling')
+    coupling_results = []
+    baseline_results = []
+    print('LeNet Coupling')
     for seed in seeds:
         print(f'Seed: {seed}')
         np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
         split_order = np.random.permutation(600)
-        print('Individual Training A')
-        individual_accuracy_a = di_utils.cifar100_individual_train('lenet', class1=71, class2=44, epochs=1000, batch_size=128, lr=0.01, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
-        print('Individual Training B')
-        individual_accuracy_b = di_utils.cifar100_individual_train('lenet', class1=93, class2=43, epochs=1000, batch_size=128, lr=0.01, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
+        #print('Individual Training A')
+        #individual_accuracy_a = di_utils.cifar100_individual_train('lenet', class1=71, class2=44, epochs=1000, batch_size=128, lr=0.01, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
+        #print('Individual Training B')
+        #individual_accuracy_b = di_utils.cifar100_individual_train('lenet', class1=93, class2=43, epochs=1000, batch_size=128, lr=0.01, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
         print('Joint Training')
         joint_accuracy_a, joint_accuracy_b = di_utils.cifar100_joint_train('lenet', class1a=71, class2a=44, class1b=93, class2b=43, epochs=1000, batch_size=128, lr=0.01, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
-        results.append([seed, individual_accuracy_a, individual_accuracy_b, joint_accuracy_a, joint_accuracy_b])
-        np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/lenet_coupling.csv', results, delimiter=', ', fmt='% s')
+        #baseline_results.append([seed, individual_accuracy_a, individual_accuracy_b, joint_accuracy_a, joint_accuracy_b])
+        #np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/lenet_baseline.csv', baseline_results, delimiter=', ', fmt='% s')
         print('Coupling')
         for coupling_weight in coupling_weights:
             coupling_a, coupling_b, epoch = lenet_coupling('/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/lenet_joint_71_93vs44_43.pth', class1a=71, class2a=44, class1b=93, class2b=43, coupling_weight=coupling_weight, epochs=3000, batch_size=128, lr=1e-4, save_path='/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True)
-            results.append([seed, coupling_weight, coupling_a, coupling_b, epoch])
-            np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/lenet_coupling.csv', results, delimiter=', ', fmt='% s')
+            coupling_results.append([seed, coupling_weight, coupling_a, coupling_b, epoch])
+            np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/lenet_coupling.csv', coupling_results, delimiter=', ', fmt='% s')
