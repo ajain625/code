@@ -107,7 +107,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
     optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     loss_fn = nn.CrossEntropyLoss()
     batches = len(train_data)//batch_size
-    print(f'Class 1a : {class1a} Class 1b {class1b} Class 2a {class2a} Class 2b {class2b}')
+    print(f'Class 1a : {class1a} Class 1b : {class1b} Class 2a : {class2a} Class 2b : {class2b}')
     seeds = np.arange(epochs)
 
     for epoch in range(epochs):
@@ -115,9 +115,15 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
         shuffle = np.random.permutation(len(train_data))
         train_data = train_data[shuffle]
         train_labels = train_labels[shuffle]
-        for batch in range(batches-1):
-            images = torch.from_numpy(train_data[batch*batch_size:(batch+1)*batch_size]).to(device)
-            labels = torch.from_numpy(train_labels[batch*batch_size:(batch+1)*batch_size]).to(device)
+        del shuffle
+        torch.cuda.empty_cache()
+        for batch in range(batches):
+            if batch != batches-1:
+                images = torch.from_numpy(train_data[batch*batch_size:(batch+1)*batch_size]).to(device)
+                labels = torch.from_numpy(train_labels[batch*batch_size:(batch+1)*batch_size]).to(device)
+            else:
+                images = torch.from_numpy(train_data[batch*batch_size:]).to(device)
+                labels = torch.from_numpy(train_labels[batch*batch_size:]).to(device)
             outputs = net(images)
             loss = loss_fn(outputs, labels)
             optimizer.zero_grad()
@@ -126,17 +132,6 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
             #print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batch+1, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
             del images, labels, outputs
             torch.cuda.empty_cache()
-        images = torch.from_numpy(train_data[(batches-1)*batch_size:]).to(device)
-        labels = torch.from_numpy(train_labels[(batches-1)*batch_size:]).to(device)
-        outputs = net(images)
-        loss = loss_fn(outputs, labels)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        #print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batches, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
-        del images, labels, outputs
-        torch.cuda.empty_cache()
-
         # Test Set	
         with torch.no_grad():
             net.eval()
