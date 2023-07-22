@@ -6,14 +6,6 @@ import utils
 import models
 import di_utils
 
-# net1 = models.LeNet5(10)
-# net2 = models.LeNet5(10)
-
-# print(net1.state_dict()['layer1.0.bias'].shape)
-# print(net1.state_dict()['layer1.1.bias'].shape)
-# print(net1.state_dict()['layer1.0.weight'].shape)
-# print(net1.state_dict()['layer1.1.weight'].shape)
-
 # optim = torch.optim.SGD([{'params': net1.parameters()},{'params': net2.parameters()}], lr=10)
 # loss_fn = nn.MSELoss()
 

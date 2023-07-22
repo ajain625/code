@@ -158,6 +158,7 @@ def disparate_impact(model, class1a, class1b, class2a, class2b, cross=False, see
     assert model in ['lenet', 'resnet']
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
     if fine:
         split_order = np.random.permutation(600)
     else:
