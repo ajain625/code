@@ -109,12 +109,13 @@ def lenet_coupling(checkpoint, class1a, class1b, class2a, class2b, save_path = '
 
     net1 = models.LeNet5(2)
     net2 = models.LeNet5(2)
-    #checkpoint1 = torch.load(checkpoint)['model_state_dict']
-    #checkpoint2 = torch.load(checkpoint)['model_state_dict']
-    #checkpoint1 = {k:v for k,v in checkpoint1.items() if not k.startswith('fc')}
-    #checkpoint2 = {k:v for k,v in checkpoint2.items() if not k.startswith('fc')}
-    net1.load_state_dict(torch.load(checkpoint)['model_state_dict'], strict=True)
-    net2.load_state_dict(torch.load(checkpoint)['model_state_dict'], strict=True)
+    #checkpoint_dict = torch.load(checkpoint)['model_state_dict']
+    #checkpoint_dict = {k:v for k,v in checkpoint_dict.items() if not k.startswith('fc')}
+    #net1.load_state_dict(checkpoint_dict, strict=False)
+    #net2.load_state_dict(checkpoint_dict, strict=False)
+    #net1.load_state_dict(torch.load(checkpoint)['model_state_dict'], strict=True)
+    #net2.load_state_dict(torch.load(checkpoint)['model_state_dict'], strict=True)
+    net2.load_state_dict(net1.state_dict())
     print(f'Accuracy A : {torch.load(checkpoint)["test_accuracy_a"]}, Accuracy B : {torch.load(checkpoint)["test_accuracy_b"]}')
     net1.train()
     net2.train()
