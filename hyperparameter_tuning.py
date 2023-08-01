@@ -4,7 +4,7 @@ import time
 import di_utils
 import os
 
-def lenet_cifar100_hyperparameter_search(seed):
+def cifar100_hyperparameter_search(seed):
     print('seed: {}'.format(seed))
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
@@ -27,13 +27,13 @@ def lenet_cifar100_hyperparameter_search(seed):
             for lr in lr_range:
                 print('reduction: {}, epoch: {}, lr: {}'.format(reduction, epoch, lr))
                 start_time = time.time()
-                accuracy_a = di_utils.cifar100_individual_train('lenet', class1=class1a, class2=class2a, seed=seed, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/hyperparameter_tuning/', epochs=epoch, batch_size=int(128*reduction), lr=lr, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
-                accuracy_b = di_utils.cifar100_individual_train('lenet', class1=class1b, class2=class2b, seed=seed, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/hyperparameter_tuning/', epochs=epoch, batch_size=int(128*reduction), lr=lr, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
+                accuracy_a = di_utils.cifar100_individual_train('resnet', class1=class1a, class2=class2a, seed=seed, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/hyperparameter_tuning/', epochs=epoch, batch_size=int(128*reduction), lr=lr, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
+                accuracy_b = di_utils.cifar100_individual_train('resnet', class1=class1b, class2=class2b, seed=seed, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/hyperparameter_tuning/', epochs=epoch, batch_size=int(128*reduction), lr=lr, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
                 end_time = time.time()
                 results.append([reduction, epoch, lr, accuracy_a, accuracy_b, end_time-start_time])
-                np.savetxt(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/hyperparameter_tuning/lenet_seed{seed}.csv', results, delimiter=', ', fmt='% s')
+                np.savetxt(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/hyperparameter_tuning/resnet_seed{seed}.csv', results, delimiter=', ', fmt='% s')
                 print(results[-1])
 
 if __name__ == '__main__':
     seed = int(os.getenv('SLURM_ARRAY_TASK_ID'))
-    lenet_cifar100_hyperparameter_search(seed)
+    cifar100_hyperparameter_search(seed)
