@@ -343,9 +343,13 @@ def lenet_complete_analysis(seed):
         reductions = np.array([0.1, 0.2, 0.5, 1])
         coupling_weights = np.array([0, 1000, 10000])
         lrs = np.array([1e-3, 1e-3, 1e-3])
-        epochs = np.array([10000, 10000, 10000])
+        epochs = np.array([5000, 5000, 5000])
         reduction_results = []
         baseline_results = []
+        class1a = 1
+        class2a = 6
+        class1b = 54
+        class2b = 21
         print(f'LeNet Coupling, seed {seed}')
         for reduction in reductions:
             print(f'Seed: {seed}')
@@ -355,26 +359,29 @@ def lenet_complete_analysis(seed):
             torch.cuda.manual_seed(seed)
             split_order = np.random.permutation(100 + int((500*reduction)))
             print('Individual Training A')
-            individual_accuracy_a = di_utils.cifar100_individual_train('lenet', class1=71, class2=44, epochs=10000, batch_size=int(128*reduction), lr=0.001, save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
+            individual_accuracy_a = di_utils.cifar100_individual_train('lenet', class1=class1a, class2=class2a, epochs=10000, batch_size=int(128*reduction), lr=0.001, save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
             torch.cuda.empty_cache()
             print('Individual Training B')
-            individual_accuracy_b = di_utils.cifar100_individual_train('lenet', class1=93, class2=43, epochs=10000, batch_size=int(128*reduction), lr=0.001, save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
+            individual_accuracy_b = di_utils.cifar100_individual_train('lenet', class1=class1b, class2=class2b, epochs=10000, batch_size=int(128*reduction), lr=0.001, save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
             torch.cuda.empty_cache()
             print('Joint Training')
-            joint_accuracy_a, joint_accuracy_b = di_utils.cifar100_joint_train('lenet', class1a=71, class2a=44, class1b=93, class2b=43, epochs=10000, batch_size=int(128*reduction), lr=1e-3, save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
+            joint_accuracy_a, joint_accuracy_b = di_utils.cifar100_joint_train('lenet', class1a=class1a, class2a=class2a, class1b=class1b, class2b=class2b, epochs=10000, batch_size=int(128*reduction), lr=1e-3, save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
             torch.cuda.empty_cache()
             baseline_results.append([seed, reduction, individual_accuracy_a, individual_accuracy_b, joint_accuracy_a, joint_accuracy_b])
-            np.savetxt(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/seed{seed}_lenet_reduction_reinitialised_10000epochs_1e-3lr.csv', baseline_results, delimiter=', ', fmt='% s')
+            np.savetxt(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/task2_seed{seed}_lenet_reduction_reinitialised_5000epochs_1e-3lr.csv', baseline_results, delimiter=', ', fmt='% s')
             print('Coupling')
             for i in range(len(coupling_weights)):
-                coupling_a, coupling_b, epoch, best_accuracy_a, best_accuracy_b = lenet_coupling(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_lenet_joint_71_93vs44_43.pth', class1a=71, class2a=44, class1b=93, class2b=43, coupling_weight=coupling_weights[i], epochs=epochs[i], batch_size=int(128*reduction), lr=lrs[i], save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
+                coupling_a, coupling_b, epoch, best_accuracy_a, best_accuracy_b = lenet_coupling(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/fine/seed{seed}_reduced_{reduction}_lenet_joint_71_93vs44_43.pth', class1a=class1a, class2a=class2a, class1b=class1b, class2b=class2b, coupling_weight=coupling_weights[i], epochs=epochs[i], batch_size=int(128*reduction), lr=lrs[i], save_path=f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/seed{seed}_reduced_{reduction}_', seed=seed, momentum=0, weight_decay=0, random_split=True, split_order=split_order, fine=True, reduction=reduction)
                 reduction_results.append([seed, reduction, coupling_weights[i], coupling_a, coupling_b, epoch, best_accuracy_a, best_accuracy_b])
-                np.savetxt(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/seed{seed}_lenet_reduction_reinitialised_coupling_10000epochs_1e-3lr.csv', reduction_results, delimiter=', ', fmt='% s')
+                np.savetxt(f'/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/task2_seed{seed}_lenet_reduction_reinitialised_coupling_5000epochs_1e-3lr.csv', reduction_results, delimiter=', ', fmt='% s')
                 torch.cuda.empty_cache()
 
 if __name__ == '__main__':
     # Task a: rose (71) vs lion (44)
     # Task b: tulip (93) vs lepoard (43)
+
+    # Task a: apple (1) vs bed (6)
+    # Task b: orange (54) vs chair (21)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     # coupling_weights = np.array([0, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000])
@@ -439,5 +446,3 @@ if __name__ == '__main__':
     #             np.savetxt('/nfs/ghome/live/ajain/checkpoints/di_cifar100/coupled/fine/lenet_reduction_reinitialised_coupling_10000epochs_1e-3.csv', reduction_results, delimiter=', ', fmt='% s')
     seed = int(os.getenv('SLURM_ARRAY_TASK_ID'))
     lenet_complete_analysis(seed)
-
-    
