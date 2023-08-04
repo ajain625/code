@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+from torchvision.transforms import Resize
 
 class LeNet5(nn.Module):
     def __init__(self, num_classes):
@@ -31,17 +31,46 @@ class LeNet5(nn.Module):
         out = self.fc2(out)
         return out
 
+class AlexNet(nn.Module):
+    def __init__(self, num_classes: int = 2, dropout: float = 0.5) -> None:
+        super().__init__()
+        self.transform = Resize((64, 64), antialias=True)
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(64, 192, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(192, 384, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(384, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+        )
+        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=dropout),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=dropout),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.transform(x)
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
+
 # Variable Width ResNet 
 # adapted from https://github.com/ssagawa/overparam_spur_corr/blob/master/variable_width_resnet.py
-
-try:
-    from torch.hub import load_state_dict_from_url
-except ImportError:
-    from torch.utils.model_zoo import load_url as load_state_dict_from_url
-
-#__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
-#           'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
-#           'wide_resnet50_2', 'wide_resnet101_2']
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
