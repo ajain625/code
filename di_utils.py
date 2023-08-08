@@ -4,10 +4,11 @@ import numpy as np
 
 import utils
 import models
+from torchvision.transforms import Resize
 
 
 def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/coarse', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False, reduction=1):
-    assert model in ['lenet', 'resnet']
+    assert model in ['lenet', 'resnet', 'alexnet']
     #assert class1 in range(1, 21)
     #assert class2 in range(1, 21)
     assert class1 != class2	
@@ -28,6 +29,10 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
         net.fc = nn.Linear(256, 2)
         train_data, train_labels, test_data, test_labels = utils.load_cifar100_2_classes(class1, class2, gray=False, shuffle=True, split_order=split_order, seed=seed, fine=fine, random_split=random_split, reduction=reduction)
         print('data and resnet loaded')
+    elif model == 'alexnet':
+        net = models.AlexNet(2)
+        train_data, train_labels, test_data, test_labels = utils.load_cifar100_2_classes(class1, class2, gray=False, shuffle=True, split_order=split_order, seed=seed, fine=fine, random_split=random_split, reduction=reduction)
+        print('data and alexnet loaded')
 
     net = net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
@@ -59,7 +64,8 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        #print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batches, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
+        if epoch%50 == 0:
+            print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batches, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
         del images, labels, outputs
         torch.cuda.empty_cache()
 
@@ -71,7 +77,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
             outputs = net(images)
             loss = loss_fn(outputs, labels)
             test_accuracy = utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())
-            if epoch%10 == 0:
+            if epoch%50 == 0:
                 print('(Test Set) Epoch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, loss.item(), test_accuracy))
             del images, labels, outputs
             torch.cuda.empty_cache()
@@ -81,7 +87,7 @@ def cifar100_individual_train(model, class1, class2, save_path = '/nfs/ghome/liv
     return test_accuracy
 
 def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = '/nfs/ghome/live/ajain/checkpoints/di_cifar100/baseline/coarse', epochs=500, batch_size = 128, lr=0.01, momentum=0.9, weight_decay=0.0001, random_split=True, seed=42, split_order = None, fine=False, reduction=1):
-    assert model in ['lenet', 'resnet']
+    assert model in ['lenet', 'resnet', 'alexnet']
     #assert class1a in range(1, 21)
     #assert class1b in range(1, 21)
     #assert class2a in range(1, 21)
@@ -102,6 +108,14 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
         net.fc = nn.Linear(256, 2)
         train_data, train_labels, test_data_a, test_data_b, test_labels = utils.load_cifar100_4_classes(class1a, class1b, class2a, class2b, gray=False, shuffle=True, random_split=random_split, split_order=split_order, seed=seed, fine=fine, reduction=reduction)
         print('data and resnet loaded')
+    elif model == 'alexnet':
+        net = models.AlexNet(2)
+        train_data, train_labels, test_data_a, test_data_b, test_labels = utils.load_cifar100_4_classes(class1a, class1b, class2a, class2b, gray=False, shuffle=True, random_split=random_split, split_order=split_order, seed=seed, fine=fine, reduction=reduction)
+        #resize = Resize((227, 227))
+        #train_data = resize(torch.from_numpy(train_data)).numpy()
+        #test_data_a = resize(torch.from_numpy(test_data_a)).numpy(dtype=np.float32)
+        #test_data_b = resize(torch.from_numpy(test_data_b)).numpy(dtype=np.float32)
+        print('data and alexnet loaded')
 
     net = net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
@@ -129,6 +143,8 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            if epoch%50 == 0 and batch == batches-1:
+                print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batch+1, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
             #print('Epoch: [{}/{}], Batch: [{}/{}], Loss: {}, Accuracy: {}'.format(epoch+1, epochs, batch+1, batches, loss.item(), utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs.detach().cpu().numpy())))
             del images, labels, outputs
             torch.cuda.empty_cache()
@@ -142,7 +158,7 @@ def cifar100_joint_train(model, class1a, class1b, class2a, class2b, save_path = 
             outputs_b = net(images_b)
             test_accuracy_a = utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs_a.detach().cpu().numpy())
             test_accuracy_b = utils.cifar_accuracy(labels.detach().cpu().numpy(), outputs_b.detach().cpu().numpy())
-            if epoch%10 == 0:
+            if epoch%50 == 0:
                 print('(Test Set) Epoch: [{}/{}], Accuracy Task A : {}, Accuracy Task B: {}'.format(epoch+1, epochs, test_accuracy_a, test_accuracy_b))
             del images_a, images_b, labels, outputs_a, outputs_b
             torch.cuda.empty_cache()
@@ -155,7 +171,7 @@ def disparate_impact(model, class1a, class1b, class2a, class2b, cross=False, see
     print('Disparate Impact Analysis')
     print('Model: ', model)
     print('Classes: ', class1a, class1b, class2a, class2b)
-    assert model in ['lenet', 'resnet']
+    assert model in ['lenet', 'resnet', 'alexnet']
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -181,16 +197,13 @@ def disparate_impact(model, class1a, class1b, class2a, class2b, cross=False, see
 if __name__ == '__main__':
     # aquatic - 1, flower - 3
     # medium mammals - 13, large carnivores - 9
-    #cifar100_joint_train('resnet', 1, 9, 3, 13)
-    #cifar100_joint_train('lenet', 1, 9, 3, 13)
-    #cifar100_individual_train('resnet', 1, 3)
-    #cifar100_individual_train('lenet', 1, 3)
-    #cifar100_individual_train('resnet', 9, 13)
-    #cifar100_individual_train('lenet', 9, 13)
-    #disparate_impact('resnet', class1a = 1, class1b = 9, class2a = 3, class2b = 13, cross=True, seed=42)
     seed = 42
+    #np.random.seed(seed)
+    #split_order = np.random.permutation(3000)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    #torch.manual_seed(seed)
+    #torch.cuda.manual_seed(seed)
     tasks = np.array([[ 4,  1,  9,  8],
        [ 8,  5,  4,  3],
        [19, 14,  2,  1],
