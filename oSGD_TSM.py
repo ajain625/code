@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import norm
+from scipy.stats.mvn import mvnun
 
 def get_vector(vector, similarity):
     """given a vector and a desired cosine similarity, 
@@ -11,6 +12,15 @@ def get_vector(vector, similarity):
     x = np.random.normal(size=len(vector))
     u = np.sqrt(1-t**2)*(x-(np.dot(x,vector)*vector))/np.linalg.norm(x-(np.dot(x,vector)*vector))
     return (t*vector + u)*target_norm
+
+def get_conf_matrix(mean, cov):
+    """expects 2d parameters. the first corresponds to the prediction and
+    the second to the ground truth"""
+    TN, _ = mvnun(np.array([-np.inf, -np.inf]), np.array([0, 0]), mean, cov)
+    TP, _  = mvnun(np.array([0, 0]), np.array([np.inf, np.inf]), mean, cov)
+    FN, _ = mvnun(np.array([-np.inf, 0]), np.array([0, np.inf]), mean, cov)
+    FP = 1 - TP - TN - FN
+    return np.array([[TP, FN], [FP, TN]])
 
 def generate_data(T, d, mean, varpos, varneg, mixing, seed=0):
     np.random.seed(seed)
@@ -36,7 +46,7 @@ def label_data(posdata, negdata, cosine_similarity, biaspos, biasneg):
     ytrue[labels] = 1
     return data, ytrue
 
-def oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg, biaspos, biasneg, seed=0):
+def oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg, biaspos, biasneg, seed=0, get_conf=False):
     Q0 = np.dot(classifier0, classifier0)/d
     R0 = np.dot(classifier0, mean)/d
     Tpos0 = np.dot(classifier0, teachpos)/d
@@ -104,6 +114,11 @@ def oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg
     Tposs[0]  = Tpos
     Tnegs = np.zeros(T+1)
     Tnegs[0] = Tneg  
+    
+    if get_conf:
+        conf_matrices = np.zeros((T+1, 2, 2, 2))
+        conf_matrices[0, 0, :, :] = get_conf_matrix(np.array([R, Spos + biaspos]), np.array([[Q, Tpos], [Tpos, Mpos]]))
+        conf_matrices[0, 1, :, :] = get_conf_matrix(np.array([-R, -Sneg + biasneg]), np.array([[Q, Tneg], [Tneg, Mneg]]))
 
     for i in range(1, T+1):
         # Needed for generalisation error and Q
@@ -128,10 +143,15 @@ def oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg
         Rs[i] = R
         Tposs[i] = Tpos
         Tnegs[i] = Tneg
+        if get_conf:
+            conf_matrices[i, 0, :, :] = get_conf_matrix(np.array([Rs[i-1], Spos + biaspos]), np.array([[Qs[i-1], Tposs[i-1]], [Tposs[i-1], Mpos]]))
+            conf_matrices[i, 1, :, :] = get_conf_matrix(np.array([-Rs[i-1], -Sneg + biasneg]), np.array([[Qs[i-1], Tnegs[i-1]], [Tnegs[i-1], Mneg]]))
     
+    if get_conf:
+        return egs, egposs, egnegs, Qs, Rs, Tposs, Tnegs, conf_matrices
     return egs, egposs, egnegs, Qs, Rs, Tposs, Tnegs
 
-def error_analysis(egposs, egnegs):
+def error_analysis(egposs, egnegs, conf_matrices = None):
     egposmin = np.min(egposs)
     egnegmin = np.min(egnegs)
     egposminind = np.argmin(egposs)
@@ -150,16 +170,48 @@ def error_analysis(egposs, egnegs):
     di_start = dis[0]
     di_end = dis[-1]
 
+    if conf_matrices is not None:
+        fnposmin = np.min(conf_matrices[:, 0, 0, 1])
+        fnposminind = np.argmin(conf_matrices[:, 0, 0, 1])
+        fnposmax = np.max(conf_matrices[:, 0, 0, 1])
+        fnposmaxind = np.argmax(conf_matrices[:, 0, 0, 1])
+        fnnegmin = np.min(conf_matrices[:, 1, 0, 1])
+        fnnegminind = np.argmin(conf_matrices[:, 1, 0, 1])
+        fnnegmax = np.max(conf_matrices[:, 1, 0, 1])
+        fnnegmaxind = np.argmax(conf_matrices[:, 1, 0, 1])
+
+        fpposmin = np.min(conf_matrices[:, 0, 1, 0])
+        fpposminind = np.argmin(conf_matrices[:, 0, 1, 0])
+        fpposmax = np.max(conf_matrices[:, 0, 1, 0])
+        fpposmaxind = np.argmax(conf_matrices[:, 0, 1, 0])
+        fpnegmin = np.min(conf_matrices[:, 1, 1, 0])
+        fpnegminind = np.argmin(conf_matrices[:, 1, 1, 0])
+        fpnegmax = np.max(conf_matrices[:, 1, 1, 0])
+        fpnegmaxind = np.argmax(conf_matrices[:, 1, 1, 0])
+
+        fnpos_start = conf_matrices[0, 0, 0, 1]
+        fnpos_end = conf_matrices[-1, 0, 0, 1]
+        fnneg_start = conf_matrices[0, 1, 0, 1]
+        fnneg_end = conf_matrices[-1, 1, 0, 1]
+
+        fppos_start = conf_matrices[0, 0, 1, 0]
+        fppos_end = conf_matrices[-1, 0, 1, 0]
+        fpneg_start = conf_matrices[0, 1, 1, 0]
+        fpneg_end = conf_matrices[-1, 1, 1, 0]
+
+        return egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end, fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end
+    
     return egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end
 
 def complete_analysis():
     np.random.seed(0)
-    save_path = '/nfs/ghome/live/ajain/checkpoints/oSGD/first_results.csv'
+    save_path = '/nfs/ghome/live/ajain/checkpoints/oSGD/first_results_conf_matrices.csv'
     mixings = np.array([0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99])
-    varposs = np.array([0.1, 0.5, 1])
+    varposs = np.array([0.05, 0.1, 0.5, 1])
     var_ratios = np.array([0.1, 0.5, 1, 2, 5, 10])
-    cosine_similarities = np.array([-1, -0.5, -0.75, -0.1, 0, 0.1, 0.5, 0.75, 0.9])
-    lrs = np.array([0.01, 0.05, 0.1, 0.2, 0.5])
+    cosine_similarities = np.array([-1, -0.75, 0, 0.5, 0.7, 0.8, 0.9])
+    #lrs = np.array([0.01, 0.05, 0.1, 0.2, 0.5])
+    lrs = np.array([0.2])
 
     T = 50000
     d = 1000
@@ -179,11 +231,11 @@ def complete_analysis():
                     teachneg = get_vector(teachpos, cosine_similarity)
                     for lr in lrs:
                         print('...')
-                        _, egposs, egnegs, _, _, Tposs, Tnegs = oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg, biaspos, biasneg)
-                        egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end = error_analysis(egposs, egnegs)
-                        print(f"mixing: {mixing}, varpos: {varpos}, varneg: {varneg}, cosine_similarity: {cosine_similarity}, lr: {lr}, egposmin: {egposmin}, egposmax: {egposmax}, egposminind: {egposminind}, egposmaxind: {egposmaxind}, egnegmin: {egnegmin}, egnegmax: {egnegmax}, egnegminind: {egnegminind}, egnegmaxind: {egnegmaxind}, dismin: {dismin}, dismax: {dismax}, disminind: {disminind}, dismaxind: {dismaxind}, di_start: {di_start}, di_end: {di_end}, Tpos_end: {Tposs[-1]}, Tneg_end: {Tnegs[-1]}")
-                        results.append([mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs[0], Tposs[-1], Tnegs[0], Tnegs[-1]])
-                        np.savetxt(save_path, results, delimiter=',', header='mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs_start, Tposs_end, Tnegs_start, Tnegs_end', fmt='%f')
+                        _, egposs, egnegs, _, _, Tposs, Tnegs, conf_matrices = oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg, biaspos, biasneg, get_conf=True)
+                        egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end, fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end = error_analysis(egposs, egnegs, conf_matrices)
+                        print(f"mixing: {mixing}, varpos: {varpos}, varneg: {varneg}, cosine_similarity: {cosine_similarity}, lr: {lr}, egposmin: {egposmin}, egposmax: {egposmax}, egposminind: {egposminind}, egposmaxind: {egposmaxind}, egnegmin: {egnegmin}, egnegmax: {egnegmax}, egnegminind: {egnegminind}, egnegmaxind: {egnegmaxind}, dismin: {dismin}, dismax: {dismax}, disminind: {disminind}, dismaxind: {dismaxind}, di_start: {di_start}, di_end: {di_end}, Tpos_end: {Tposs[-1]}, Tneg_end: {Tnegs[-1]}, fnposmin : {fnposmin}, fnposminind: {fnposminind}, fnposmax: {fnposmax}, fnposmaxind: {fnposmaxind}, fnnegmin: {fnnegmin}, fnnegminind: {fnnegminind}, fnnegmax: {fnnegmax}, fnnegmaxind: {fnnegmaxind}, fpposmin: {fpposmin}, fpposminind: {fpposminind}, fpposmax: {fpposmax}, fpposmaxind: {fpposmaxind}, fpnegmin: {fpnegmin}, fpnegminind: {fpnegminind}, fpnegmax: {fpnegmax}, fpnegmaxind: {fpnegmaxind}, fnpos_start: {fnpos_start}, fnpos_end: {fnpos_end}, fnneg_start: {fnneg_start}, fnneg_end: {fnneg_end}, fppos_start: {fppos_start}, fppos_end: {fppos_end}, fpneg_start: {fpneg_start}, fpneg_end: {fpneg_end}")
+                        results.append([mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs[0], Tposs[-1], Tnegs[0], Tnegs[-1], fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end])
+                        np.savetxt(save_path, results, delimiter=',', header='mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs_start, Tposs_end, Tnegs_start, Tnegs_end, fnposmin, fnposmindind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end ', fmt='%f')
 
 if __name__ == '__main__':
     complete_analysis()
