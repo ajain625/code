@@ -94,8 +94,8 @@ def oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg
     
     if get_conf:
         conf_matrices = np.zeros((T+1, 2, 2, 2))
-        conf_matrices[0, 0, :, :] = get_conf_matrix(np.array([R, Spos + biaspos]), np.array([[Q, Tpos], [Tpos, Mpos]]))
-        conf_matrices[0, 1, :, :] = get_conf_matrix(np.array([-R, -Sneg + biasneg]), np.array([[Q, Tneg], [Tneg, Mneg]]))
+        conf_matrices[0, 0, :, :] = get_conf_matrix(np.array([R, Spos + biaspos]), varpos*np.array([[Q, Tpos], [Tpos, Mpos]]))
+        conf_matrices[0, 1, :, :] = get_conf_matrix(np.array([-R, -Sneg + biasneg]), varneg*np.array([[Q, Tneg], [Tneg, Mneg]]))
 
     for i in range(1, T+1):
         # Needed for generalisation error and Q
@@ -121,8 +121,8 @@ def oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg
         Tposs[i] = Tpos
         Tnegs[i] = Tneg
         if get_conf:
-            conf_matrices[i, 0, :, :] = get_conf_matrix(np.array([Rs[i-1], Spos + biaspos]), np.array([[Qs[i-1], Tposs[i-1]], [Tposs[i-1], Mpos]]))
-            conf_matrices[i, 1, :, :] = get_conf_matrix(np.array([-Rs[i-1], -Sneg + biasneg]), np.array([[Qs[i-1], Tnegs[i-1]], [Tnegs[i-1], Mneg]]))
+            conf_matrices[i, 0, :, :] = get_conf_matrix(np.array([Rs[i-1], Spos + biaspos]), varpos*np.array([[Qs[i-1], Tposs[i-1]], [Tposs[i-1], Mpos]]))
+            conf_matrices[i, 1, :, :] = get_conf_matrix(np.array([-Rs[i-1], -Sneg + biasneg]), varneg*np.array([[Qs[i-1], Tnegs[i-1]], [Tnegs[i-1], Mneg]]))
     
     if get_conf:
         return egs, egposs, egnegs, Qs, Rs, Tposs, Tnegs, conf_matrices
@@ -200,8 +200,8 @@ def oSGD_lr_reweighed(T, d, lr, classifier0, mean, mixing, varpos, varneg, teach
     
     if get_conf:
         conf_matrices = np.zeros((T+1, 2, 2, 2))
-        conf_matrices[0, 0, :, :] = get_conf_matrix(np.array([R, Spos + biaspos]), np.array([[Q, Tpos], [Tpos, Mpos]]))
-        conf_matrices[0, 1, :, :] = get_conf_matrix(np.array([-R, -Sneg + biasneg]), np.array([[Q, Tneg], [Tneg, Mneg]]))
+        conf_matrices[0, 0, :, :] = get_conf_matrix(np.array([R, Spos + biaspos]), varpos*np.array([[Q, Tpos], [Tpos, Mpos]]))
+        conf_matrices[0, 1, :, :] = get_conf_matrix(np.array([-R, -Sneg + biasneg]), varneg*np.array([[Q, Tneg], [Tneg, Mneg]]))
     
     lrpos = lr/varpos
     lrneg = lr/varneg
@@ -230,8 +230,8 @@ def oSGD_lr_reweighed(T, d, lr, classifier0, mean, mixing, varpos, varneg, teach
         Tposs[i] = Tpos
         Tnegs[i] = Tneg
         if get_conf:
-            conf_matrices[i, 0, :, :] = get_conf_matrix(np.array([Rs[i-1], Spos + biaspos]), np.array([[Qs[i-1], Tposs[i-1]], [Tposs[i-1], Mpos]]))
-            conf_matrices[i, 1, :, :] = get_conf_matrix(np.array([-Rs[i-1], -Sneg + biasneg]), np.array([[Qs[i-1], Tnegs[i-1]], [Tnegs[i-1], Mneg]]))
+            conf_matrices[i, 0, :, :] = get_conf_matrix(np.array([Rs[i-1], Spos + biaspos]), varpos*np.array([[Qs[i-1], Tposs[i-1]], [Tposs[i-1], Mpos]]))
+            conf_matrices[i, 1, :, :] = get_conf_matrix(np.array([-Rs[i-1], -Sneg + biasneg]), varneg*np.array([[Qs[i-1], Tnegs[i-1]], [Tnegs[i-1], Mneg]]))
     
     if get_conf:
         return egs, egposs, egnegs, Qs, Rs, Tposs, Tnegs, conf_matrices
@@ -365,7 +365,7 @@ def complete_simulation(T, d, lr, classifier0, mean, mixing, varpos, varneg, tea
     
     return simegs, simegposs, simegnegs, simQs, simRs, simTposs, simTnegs
 
-def error_analysis(egposs, egnegs, conf_matrices = None):
+def error_analysis(egposs, egnegs, conf_matrices = None, mixing=None):
     egposmin = np.min(egposs)
     egnegmin = np.min(egnegs)
     egposminind = np.argmin(egposs)
@@ -413,7 +413,24 @@ def error_analysis(egposs, egnegs, conf_matrices = None):
         fpneg_start = conf_matrices[0, 1, 1, 0]
         fpneg_end = conf_matrices[-1, 1, 1, 0]
 
-        return egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end, fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end
+        eposs = conf_matrices[:, 0, 0, 1] + conf_matrices[:, 0, 1, 0]
+        enegs = conf_matrices[:, 1, 0, 1] + conf_matrices[:, 1, 1, 0]
+        es = mixing*eposs + (1-mixing)*enegs
+
+        epossmin = np.min(eposs)
+        epossminind = np.argmin(eposs)
+        eposs_end = eposs[-1]
+
+        enegsmin = np.min(enegs)
+        enegsminind = np.argmin(enegs)
+        enegs_end = enegs[-1]
+
+        esmin = np.min(es)
+        esminind = np.argmin(es)
+        es_end = es[-1]
+
+
+        return egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end, fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end, epossmin, epossminind, eposs_end, enegsmin, enegsminind, enegs_end, esmin, esminind, es_end
     
     return egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end
 
@@ -446,10 +463,10 @@ def complete_analysis():
                     for lr in lrs:
                         print('...')
                         _, egposs, egnegs, _, _, Tposs, Tnegs, conf_matrices = oSGD(T, d, lr, classifier0, mean, mixing, varpos, varneg, teachpos, teachneg, biaspos, biasneg, get_conf=True)
-                        egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end, fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end = error_analysis(egposs, egnegs, conf_matrices)
-                        print(f"mixing: {mixing}, varpos: {varpos}, varneg: {varneg}, cosine_similarity: {cosine_similarity}, lr: {lr}, egposmin: {egposmin}, egposmax: {egposmax}, egposminind: {egposminind}, egposmaxind: {egposmaxind}, egnegmin: {egnegmin}, egnegmax: {egnegmax}, egnegminind: {egnegminind}, egnegmaxind: {egnegmaxind}, dismin: {dismin}, dismax: {dismax}, disminind: {disminind}, dismaxind: {dismaxind}, di_start: {di_start}, di_end: {di_end}, Tpos_end: {Tposs[-1]}, Tneg_end: {Tnegs[-1]}, fnposmin : {fnposmin}, fnposminind: {fnposminind}, fnposmax: {fnposmax}, fnposmaxind: {fnposmaxind}, fnnegmin: {fnnegmin}, fnnegminind: {fnnegminind}, fnnegmax: {fnnegmax}, fnnegmaxind: {fnnegmaxind}, fpposmin: {fpposmin}, fpposminind: {fpposminind}, fpposmax: {fpposmax}, fpposmaxind: {fpposmaxind}, fpnegmin: {fpnegmin}, fpnegminind: {fpnegminind}, fpnegmax: {fpnegmax}, fpnegmaxind: {fpnegmaxind}, fnpos_start: {fnpos_start}, fnpos_end: {fnpos_end}, fnneg_start: {fnneg_start}, fnneg_end: {fnneg_end}, fppos_start: {fppos_start}, fppos_end: {fppos_end}, fpneg_start: {fpneg_start}, fpneg_end: {fpneg_end}")
-                        results.append([mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs[0], Tposs[-1], Tnegs[0], Tnegs[-1], fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end])
-                        np.savetxt(save_path, results, delimiter=',', header='mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs_start, Tposs_end, Tnegs_start, Tnegs_end, fnposmin, fnposmindind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end ', fmt='%f')
+                        egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, dismin, dismax, disminind, dismaxind, di_start, di_end, fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end, epossmin, epossminind, eposs_end, enegsmin, enegsminind, enegs_end, esmin, esminind, es_end = error_analysis(egposs, egnegs, conf_matrices, mixing)
+                        print(f"mixing: {mixing}, varpos: {varpos}, varneg: {varneg}, cosine_similarity: {cosine_similarity}, lr: {lr}, egposmin: {egposmin}, egposmax: {egposmax}, egposminind: {egposminind}, egposmaxind: {egposmaxind}, egnegmin: {egnegmin}, egnegmax: {egnegmax}, egnegminind: {egnegminind}, egnegmaxind: {egnegmaxind}, dismin: {dismin}, dismax: {dismax}, disminind: {disminind}, dismaxind: {dismaxind}, di_start: {di_start}, di_end: {di_end}, Tpos_end: {Tposs[-1]}, Tneg_end: {Tnegs[-1]}, fnposmin : {fnposmin}, fnposminind: {fnposminind}, fnposmax: {fnposmax}, fnposmaxind: {fnposmaxind}, fnnegmin: {fnnegmin}, fnnegminind: {fnnegminind}, fnnegmax: {fnnegmax}, fnnegmaxind: {fnnegmaxind}, fpposmin: {fpposmin}, fpposminind: {fpposminind}, fpposmax: {fpposmax}, fpposmaxind: {fpposmaxind}, fpnegmin: {fpnegmin}, fpnegminind: {fpnegminind}, fpnegmax: {fpnegmax}, fpnegmaxind: {fpnegmaxind}, fnpos_start: {fnpos_start}, fnpos_end: {fnpos_end}, fnneg_start: {fnneg_start}, fnneg_end: {fnneg_end}, fppos_start: {fppos_start}, fppos_end: {fppos_end}, fpneg_start: {fpneg_start}, fpneg_end: {fpneg_end}, epossmin: {epossmin}, epossminind: {epossminind}, eposs_end: {eposs_end}, enegsmin: {enegsmin}, enegsminind: {enegsminind}, enegs_end: {enegs_end}, esmin: {esmin}, esminind: {esminind}, es_end: {es_end}")
+                        results.append([mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs[0], Tposs[-1], Tnegs[0], Tnegs[-1], fnposmin, fnposminind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end, epossmin, epossminind, eposs_end, enegsmin, enegsminind, enegs_end, esmin, esminind, es_end])
+                        np.savetxt(save_path, results, delimiter=',', header='mixing, varpos, varneg, cosine_similarity, lr, egposmin, egposmax, egposminind, egposmaxind, egnegmin, egnegmax, egnegminind, egnegmaxind, egposs[0], egposs[-1], egnegs[0], egnegs[-1], dismin, dismax, disminind, dismaxind, di_start, di_end, Tposs_start, Tposs_end, Tnegs_start, Tnegs_end, fnposmin, fnposmindind, fnposmax, fnposmaxind, fnnegmin, fnnegminind, fnnegmax, fnnegmaxind, fpposmin, fpposminind, fpposmax, fpposmaxind, fpnegmin, fpnegminind, fpnegmax, fpnegmaxind, fnpos_start, fnpos_end, fnneg_start, fnneg_end, fppos_start, fppos_end, fpneg_start, fpneg_end, epossmin, epossminind, eposs_end, enegsmin, enegsminind, enegs_end, esmin, esminind, es_end', fmt='%f')
 
 if __name__ == '__main__':
     complete_analysis()
